@@ -160,15 +160,19 @@ const Payments = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm relative group overflow-visible">
                   <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      payment.status === "paid"
-                        ? "bg-green-100 text-green-800"
-                        : payment.status === "created"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : payment.status === "cancelled"
-                            ? "bg-gray-100 text-gray-800"
-                            : "bg-red-100 text-red-800"
-                    }`}
+                    className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full text-white"
+                    style={{
+                      backgroundColor:
+                        payment.status === "paid"
+                          ? "#10B981" // Green
+                          : payment.status === "created"
+                            ? "#F59E0B" // Yellow
+                            : payment.status === "cancelled"
+                              ? "#ff5353ff" // Red (lighter)
+                              : payment.status === "unprocessed"
+                                ? "#9CA3AF" // Gray
+                                : "#ff0000ff", // Red (failed)
+                    }}
                   >
                     {payment.status}
                   </span>

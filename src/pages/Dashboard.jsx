@@ -37,9 +37,11 @@ const Dashboard = () => {
   if (loading) return <div>Loading...</div>;
 
   const COLORS = {
-    paid: "#10B981", // Green
+    failed: "#ff0000ff", // Red
+    cancelled: "#ff5353ff", // Red
+    unprocessed: "#9CA3AF", // Gray
     created: "#F59E0B", // Yellow
-    failed: "#EF4444", // Red
+    paid: "#10B981", // Green
   };
 
   const formattedStatusData =
@@ -103,7 +105,7 @@ const Dashboard = () => {
                     </Pie>
                     <Tooltip />
                     <Legend />
-                  </PieChart>
+                  </PieChart>₹4518
                 </ResponsiveContainer>
               </div>
             ) : (
