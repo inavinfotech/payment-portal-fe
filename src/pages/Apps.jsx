@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
+import { useToast } from "../context/ToastContext";
+
 const Apps = () => {
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newAppName, setNewAppName] = useState("");
   const [createdApp, setCreatedApp] = useState(null);
+
+  const toast = useToast();
 
   useEffect(() => {
     fetchApps();
@@ -27,6 +31,7 @@ const Apps = () => {
       if (error.response?.status === 401) {
         // Optional: Redirect to login or show error
       }
+      toast.error("Failed to fetch apps");
     } finally {
       setLoading(false);
     }
@@ -43,14 +48,16 @@ const Apps = () => {
       setCreatedApp(response.data);
       setApps([...apps, response.data]);
       setNewAppName("");
+      toast.success("App created successfully");
     } catch (error) {
       console.error("Failed to create app", error);
+      toast.error("Failed to create app");
     }
   };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert("Copied!");
+    toast.success("Copied to clipboard!");
   };
 
   if (loading) return <div>Loading...</div>;

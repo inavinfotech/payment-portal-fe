@@ -1,6 +1,12 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, CreditCard, AppWindow, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  CreditCard,
+  AppWindow,
+  LogOut,
+  Settings as SettingsIcon,
+} from "lucide-react";
 
 const Sidebar = () => {
   const links = [
@@ -11,11 +17,21 @@ const Sidebar = () => {
     },
     { to: "/apps", label: "Apps", icon: <AppWindow size={20} /> },
     { to: "/payments", label: "Payments", icon: <CreditCard size={20} /> },
+    { to: "/settings", label: "Settings", icon: <SettingsIcon size={20} /> },
   ];
 
   return (
     <div className="w-64 h-screen bg-gray-900 text-white flex flex-col p-4">
-      <h1 className="text-xl font-bold mb-8">SVARP CENTRAL PAYMENT PORTAL</h1>
+      <div className="flex items-center gap-3 mb-8">
+        <img
+          src="/logo.webp"
+          alt="SVARP Logo"
+          className="w-10 h-10 object-contain animate-spin-y"
+        />
+        <h1 className="text-lg font-bold leading-tight">
+          CENTRAL PAYMENT PORTAL
+        </h1>
+      </div>
       <nav className="flex flex-col gap-2">
         {links.map((link) => (
           <NavLink

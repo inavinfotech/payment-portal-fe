@@ -34,11 +34,60 @@ const Payments = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleExport = async (format) => {
+    try {
+      const adminKey = localStorage.getItem("adminKey");
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/admin/payments/export`,
+        {
+          params: { format },
+          headers: { "x-admin-key": adminKey },
+          responseType: "blob",
+        },
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `payments.${format === "excel" ? "xlsx" : format}`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Failed to export payments", error);
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Payment History</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Payment History</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleExport("csv")}
+            className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            CSV
+          </button>
+          <button
+            onClick={() => handleExport("excel")}
+            className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Excel
+          </button>
+          <button
+            onClick={() => handleExport("pdf")}
+            className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            PDF
+          </button>
+        </div>
+      </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
@@ -109,22 +158,32 @@ const Payments = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {payment.currency} {payment.amount}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                <td className="px-6 py-4 whitespace-nowrap text-sm relative group overflow-visible">
                   <span
                     className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       payment.status === "paid"
                         ? "bg-green-100 text-green-800"
                         : payment.status === "created"
                           ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
+                          : payment.status === "cancelled"
+                            ? "bg-gray-100 text-gray-800"
+                            : "bg-red-100 text-red-800"
                     }`}
                   >
                     {payment.status}
                   </span>
-                  {payment.status === "failed" &&
-                    payment.metadata_info?.failure_reason && (
-                      <div className="text-xs text-red-600 mt-1 max-w-xs break-words">
-                        {payment.metadata_info.failure_reason}
+
+                  {(payment.status === "failed" ||
+                    payment.status === "cancelled") &&
+                    (payment.metadata_info?.failure_reason ||
+                      payment.metadata_info?.cancellation_reason) && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                        <p className="whitespace-normal">
+                          {payment.metadata_info.failure_reason ||
+                            payment.metadata_info.cancellation_reason}
+                        </p>
+                        {/* Arrow */}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                       </div>
                     )}
                 </td>

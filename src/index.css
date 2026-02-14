@@ -5,3 +5,16 @@
 body {
   @apply bg-gray-50 text-gray-900;
 }
+
+/* @keyframes spin-y {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
+.animate-spin-y {
+  animation: spin-y s linear infinite;
+} */

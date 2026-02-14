@@ -9,6 +9,7 @@ import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import Apps from "./pages/Apps";
 import Payments from "./pages/Payments";
+import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -29,6 +30,7 @@ function App() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/apps" element={<Apps />} />
                     <Route path="/payments" element={<Payments />} />
+                    <Route path="/settings" element={<Settings />} />
                   </Routes>
                 </div>
               </div>
