@@ -105,7 +105,7 @@ const Dashboard = () => {
                     </Pie>
                     <Tooltip />
                     <Legend />
-                  </PieChart>₹4518
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
             ) : (
