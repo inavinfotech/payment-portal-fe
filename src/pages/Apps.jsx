@@ -206,7 +206,7 @@ const Apps = () => {
                   {new Date(app.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 hover:underline cursor-pointer">
-                  <button onClick={() => copyToClipboard(app.api_key)}>
+                  <button onClick={() => copyToClipboard(app.api_secret_hash)}>
                     Copy Key
                   </button>
                 </td>
