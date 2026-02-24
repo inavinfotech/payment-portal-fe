@@ -127,6 +127,49 @@ const Settings = () => {
     }
   };
 
+  const handleAppModeToggle = async (appId, currentMode, appName) => {
+    const action = currentMode ? "TEST" : "LIVE";
+    const message = `${
+      currentMode
+        ? "This will switch the app to use Test Razorpay credentials."
+        : "This will switch the app to use Live Razorpay credentials."
+    }`;
+
+    const isConfirmed = await confirm({
+      title: `Switch to ${action} Mode?`,
+      message: `Are you sure you want to switch the app "${appName}" to ${action} mode?\n\n${message}`,
+      confirmText: `Switch to ${action}`,
+      type: currentMode ? "primary" : "danger",
+    });
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    try {
+      const adminKey = localStorage.getItem("adminKey");
+      const newMode = !currentMode;
+
+      await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/admin/apps/${appId}/mode`,
+        { is_live_mode: newMode },
+        { headers: { "x-admin-key": adminKey } },
+      );
+
+      setApps(
+        apps.map((app) =>
+          app.id === appId ? { ...app, is_live_mode: newMode } : app,
+        ),
+      );
+      toast.success(
+        `App "${appName}" switched to ${newMode ? "LIVE" : "TEST"} mode`,
+      );
+    } catch (error) {
+      console.error("Failed to update app mode", error);
+      toast.error("Failed to update app mode");
+    }
+  };
+
   const validateDomains = (domainString) => {
     if (
       !domainString ||
@@ -255,6 +298,9 @@ const Settings = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                 Status
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                Mode
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Allowed Domains
               </th>
@@ -286,6 +332,20 @@ const Settings = () => {
                     }`}
                   >
                     {app.is_active ? "Active" : "Blocked"}
+                  </button>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    onClick={() =>
+                      handleAppModeToggle(app.id, app.is_live_mode, app.name)
+                    }
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      app.is_live_mode
+                        ? "bg-purple-100 text-purple-800 hover:bg-purple-200"
+                        : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                    }`}
+                  >
+                    {app.is_live_mode ? "LIVE" : "TEST"}
                   </button>
                 </td>
                 <td className="px-6 py-4">
