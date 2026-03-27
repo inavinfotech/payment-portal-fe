@@ -5,7 +5,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
+import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Apps from "./pages/Apps";
 import Payments from "./pages/Payments";
@@ -22,18 +22,15 @@ function App() {
           path="/*"
           element={
             <ProtectedRoute>
-              <div className="flex">
-                <Sidebar />
-                <div className="flex-1 p-8 h-screen overflow-y-auto">
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/apps" element={<Apps />} />
-                    <Route path="/payments" element={<Payments />} />
-                    <Route path="/settings" element={<Settings />} />
-                  </Routes>
-                </div>
-              </div>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/dashboard" />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/apps" element={<Apps />} />
+                  <Route path="/payments" element={<Payments />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Routes>
+              </Layout>
             </ProtectedRoute>
           }
         />

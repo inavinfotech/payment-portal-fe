@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-
+import { Plus, Copy, Key, Calendar, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useToast } from "../context/ToastContext";
+import { cn } from "../utils/cn";
 
 const Apps = () => {
   const [apps, setApps] = useState([]);
@@ -18,19 +19,16 @@ const Apps = () => {
 
   const fetchApps = async () => {
     try {
-      const adminKey = localStorage.getItem("adminKey");
+      const adminToken = localStorage.getItem("adminToken");
       const response = await axios.get(
         `${import.meta.env.VITE_API_BASE_URL}/admin/apps`,
         {
-          headers: { "x-admin-key": adminKey },
+          headers: { Authorization: `Bearer ${adminToken}` },
         },
       );
       setApps(response.data);
     } catch (error) {
       console.error("Failed to fetch apps", error);
-      if (error.response?.status === 401) {
-        // Optional: Redirect to login or show error
-      }
       toast.error("Failed to fetch apps");
     } finally {
       setLoading(false);
@@ -39,11 +37,11 @@ const Apps = () => {
 
   const handleCreateApp = async () => {
     try {
-      const adminKey = localStorage.getItem("adminKey");
+      const adminToken = localStorage.getItem("adminToken");
       const response = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/admin/apps`,
         { name: newAppName },
-        { headers: { "x-admin-key": adminKey } },
+        { headers: { Authorization: `Bearer ${adminToken}` } },
       );
       setCreatedApp(response.data);
       setApps([...apps, response.data]);
@@ -60,114 +58,108 @@ const Apps = () => {
     toast.success("Copied to clipboard!");
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+    </div>
+  );
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Registered Apps</h2>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Registered Applications</h2>
+          <p className="text-gray-500 text-sm mt-1">Manage API credentials and application access.</p>
+        </div>
         <button
           onClick={() => {
             setShowModal(true);
             setCreatedApp(null);
           }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="bg-primary-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-primary-700 shadow-lg shadow-primary-500/20 active:scale-95 transition-all"
         >
-          Create App
+          <Plus size={18} />
+          Create New App
         </button>
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">Create New App</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-gray-100 animate-in zoom-in-95 duration-300">
+            <h3 className="text-2xl font-bold mb-6 text-gray-900">Configure New Application</h3>
 
             {!createdApp ? (
-              <>
-                <input
-                  type="text"
-                  placeholder="App Name"
-                  className="w-full border p-2 rounded mb-4 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  value={newAppName}
-                  onChange={(e) => setNewAppName(e.target.value)}
-                />
-                <div className="flex justify-end gap-2">
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Display Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. My Awesome Store"
+                    className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white focus:outline-none transition-all placeholder:text-gray-400 font-medium"
+                    value={newAppName}
+                    onChange={(e) => setNewAppName(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
                   <button
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                    className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleCreateApp}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    className="px-8 py-3 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 shadow-lg shadow-primary-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
                     disabled={!newAppName}
                   >
-                    Create
+                    Generate Credentials
                   </button>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="space-y-4">
-                <div className="bg-green-50 p-4 rounded border border-green-200">
-                  <p className="font-bold text-green-800">App Created!</p>
-                  <p className="text-sm text-red-600 font-bold mt-2">
-                    Copy these credentials now. You won't see the secret again.
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    App ID
-                  </label>
-                  <div className="flex gap-2">
-                    <code className="block w-full bg-gray-100 p-2 rounded text-sm overflow-x-auto">
-                      {createdApp.id}
-                    </code>
-                    <button
-                      onClick={() => copyToClipboard(createdApp.id)}
-                      className="text-blue-600 text-sm hover:underline"
-                    >
-                      Copy
-                    </button>
+              <div className="space-y-6">
+                <div className="bg-amber-50 p-5 rounded-2xl border border-amber-200 flex gap-4 items-start">
+                  <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={20} />
+                  <div>
+                    <p className="font-bold text-amber-900">Security Warning!</p>
+                    <p className="text-sm text-amber-800 font-medium mt-1 leading-relaxed">
+                      Please copy these credentials immediately. For security reasons, the <span className="underline font-bold">API Secret</span> will not be shown again.
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    API Key
-                  </label>
-                  <div className="flex gap-2">
-                    <code className="block w-full bg-gray-100 p-2 rounded text-sm overflow-x-auto">
-                      {createdApp.api_key}
-                    </code>
-                    <button
-                      onClick={() => copyToClipboard(createdApp.api_key)}
-                      className="text-blue-600 text-sm hover:underline"
-                    >
-                      Copy
-                    </button>
-                  </div>
+
+                <div className="space-y-4">
+                  {[
+                    { label: "Application ID", value: createdApp.id },
+                    { label: "Public API Key", value: createdApp.api_key },
+                    { label: "Private API Secret", value: createdApp.api_secret, secret: true }
+                  ].map((field, idx) => (
+                    <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-100 relative group">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{field.label}</label>
+                      <div className="flex gap-3 items-center">
+                        <code className={cn(
+                          "block w-full text-sm font-mono break-all",
+                          field.secret ? "text-red-600 font-bold" : "text-gray-800"
+                        )}>
+                          {field.value}
+                        </code>
+                        <button
+                          onClick={() => copyToClipboard(field.value)}
+                          className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors shrink-0"
+                          title={`Copy ${field.label}`}
+                        >
+                          <Copy size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    API Secret
-                  </label>
-                  <div className="flex gap-2">
-                    <code className="block w-full bg-gray-100 p-2 rounded text-sm break-all">
-                      {createdApp.api_secret}
-                    </code>
-                    <button
-                      onClick={() => copyToClipboard(createdApp.api_secret)}
-                      className="text-blue-600 text-sm hover:underline"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
+
                 <button
                   onClick={() => setShowModal(false)}
-                  className="w-full px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-900"
+                  className="w-full px-4 py-4 bg-gray-900 text-white font-bold rounded-2xl hover:bg-black transition-all shadow-xl shadow-black/10"
                 >
-                  Close
+                  I've safely stored the credentials
                 </button>
               </div>
             )}
@@ -175,45 +167,66 @@ const Apps = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                API Key
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Created At
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Action
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {apps.map((app) => (
-              <tr key={app.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {app.name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                  {app.api_key}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(app.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 hover:underline cursor-pointer">
-                  <button onClick={() => copyToClipboard(app.api_secret_hash)}>
-                    Copy Key
-                  </button>
-                </td>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-[#F9FAFB]">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Application Name</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Public Identifier</th>
+                <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Registration Date</th>
+                <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-widest">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-50">
+              {apps.map((app) => (
+                <tr key={app.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-6 py-5 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-xs">
+                        {app.name[0].toUpperCase()}
+                      </div>
+                      <span className="text-sm font-bold text-gray-900">{app.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs bg-gray-50 px-2 py-1 rounded border border-gray-100 text-gray-600 font-mono">
+                        {app.api_key}
+                      </code>
+                      <button onClick={() => copyToClipboard(app.api_key)} className="text-gray-400 hover:text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Copy size={14} />
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5 whitespace-nowrap text-center">
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                      app.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                    )}>
+                      {app.is_active ? "Active" : "Disabled"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-5 whitespace-nowrap">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+                      <Calendar size={14} className="text-gray-400" />
+                      {new Date(app.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  </td>
+                  <td className="px-6 py-5 whitespace-nowrap text-right">
+                    <button 
+                      onClick={() => copyToClipboard(app.api_secret_hash)}
+                      className="text-primary-600 hover:bg-primary-50 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-transparent hover:border-primary-100"
+                    >
+                      Security Logs
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -2,10 +2,10 @@ import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 const ProtectedRoute = ({ children }) => {
-  const adminKey = localStorage.getItem("adminKey");
+  const adminToken = localStorage.getItem("adminToken");
   const location = useLocation();
 
-  if (!adminKey) {
+  if (!adminToken) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

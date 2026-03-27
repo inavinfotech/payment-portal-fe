@@ -7,17 +7,34 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!key.trim()) {
       setError("Please enter the Admin Key");
       return;
     }
 
-    // Simple validation: store key in localStorage
-    // In a real app, you might verify this against an API endpoint first
-    localStorage.setItem("adminKey", key.trim());
-    navigate("/dashboard");
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ secret_key: key.trim() }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || "Login failed");
+      }
+
+      const data = await response.json();
+      localStorage.setItem("adminToken", data.access_token);
+      localStorage.setItem("adminKey", key.trim()); // Keep for backward compatibility if needed temporarily
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    }
   };
 
   return (

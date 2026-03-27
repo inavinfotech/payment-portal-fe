@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Save, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Save, AlertTriangle, CheckCircle, XCircle, Shield, Globe, Cpu, Settings as SettingsIcon, Check } from "lucide-react";
 import { useConfirm } from "../context/ConfirmContext";
 import { useToast } from "../context/ToastContext";
+import { cn } from "../utils/cn";
 
 const Settings = () => {
   const [settings, setSettings] = useState({});
@@ -20,20 +21,19 @@ const Settings = () => {
 
   const fetchData = async () => {
     try {
-      const adminKey = localStorage.getItem("adminKey");
+      const adminToken = localStorage.getItem("adminToken");
       const [settingsRes, appsRes] = await Promise.all([
         axios.get(`${import.meta.env.VITE_API_BASE_URL}/admin/settings`, {
-          headers: { "x-admin-key": adminKey },
+          headers: { Authorization: `Bearer ${adminToken}` },
         }),
         axios.get(`${import.meta.env.VITE_API_BASE_URL}/admin/apps`, {
-          headers: { "x-admin-key": adminKey },
+          headers: { Authorization: `Bearer ${adminToken}` },
         }),
       ]);
 
       setSettings(settingsRes.data);
       setApps(appsRes.data);
 
-      // Initialize domain edits
       const initialDomains = {};
       appsRes.data.forEach((app) => {
         initialDomains[app.id] = app.allowed_domains || "*";
@@ -56,8 +56,8 @@ const Settings = () => {
       title: `${action} Global Payments?`,
       message:
         newValue === "false"
-          ? "⚠️ CRITICAL WARNING: Disabling global payments will immediately reject ALL payment requests from ALL apps. Are you absolutely sure?"
-          : "Are you sure you want to enable global payment processing? Apps will be able to accept payments again.",
+          ? "⚠️ CRITICAL WARNING: Disabling global payments will immediately reject ALL payment requests from ALL apps."
+          : "Are you sure you want to enable global payment processing?",
       confirmText:
         newValue === "false"
           ? "Yes, Stop All Payments"
@@ -68,12 +68,12 @@ const Settings = () => {
     if (!isConfirmed) return;
 
     try {
-      const adminKey = localStorage.getItem("adminKey");
+      const adminToken = localStorage.getItem("adminToken");
 
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/admin/settings`,
         { global_payment_enabled: newValue },
-        { headers: { "x-admin-key": adminKey } },
+        { headers: { Authorization: `Bearer ${adminToken}` } },
       );
 
       setSettings({ ...settings, global_payment_enabled: newValue });
@@ -88,31 +88,23 @@ const Settings = () => {
 
   const handleAppStatusToggle = async (appId, currentStatus, appName) => {
     const action = currentStatus ? "BLOCK" : "ACTIVATE";
-    const message = `${
-      currentStatus
-        ? "This will prevent the app from processing any new payments."
-        : "This will allow the app to process payments again."
-    }`;
-
     const isConfirmed = await confirm({
       title: `${action} App?`,
-      message: `Are you sure you want to ${action} the app "${appName}"?\n\n${message}`,
+      message: `Are you sure you want to ${action} "${appName}"?`,
       confirmText: currentStatus ? "Block App" : "Activate App",
       type: currentStatus ? "danger" : "primary",
     });
 
-    if (!isConfirmed) {
-      return;
-    }
+    if (!isConfirmed) return;
 
     try {
-      const adminKey = localStorage.getItem("adminKey");
+      const adminToken = localStorage.getItem("adminToken");
       const newStatus = !currentStatus;
 
       await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/admin/apps/${appId}/status`,
         { is_active: newStatus },
-        { headers: { "x-admin-key": adminKey } },
+        { headers: { Authorization: `Bearer ${adminToken}` } },
       );
 
       setApps(
@@ -129,31 +121,23 @@ const Settings = () => {
 
   const handleAppModeToggle = async (appId, currentMode, appName) => {
     const action = currentMode ? "TEST" : "LIVE";
-    const message = `${
-      currentMode
-        ? "This will switch the app to use Test Razorpay credentials."
-        : "This will switch the app to use Live Razorpay credentials."
-    }`;
-
     const isConfirmed = await confirm({
       title: `Switch to ${action} Mode?`,
-      message: `Are you sure you want to switch the app "${appName}" to ${action} mode?\n\n${message}`,
+      message: `Switch "${appName}" to ${action} mode?`,
       confirmText: `Switch to ${action}`,
       type: currentMode ? "primary" : "danger",
     });
 
-    if (!isConfirmed) {
-      return;
-    }
+    if (!isConfirmed) return;
 
     try {
-      const adminKey = localStorage.getItem("adminKey");
+      const adminToken = localStorage.getItem("adminToken");
       const newMode = !currentMode;
 
       await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/admin/apps/${appId}/mode`,
         { is_live_mode: newMode },
-        { headers: { "x-admin-key": adminKey } },
+        { headers: { Authorization: `Bearer ${adminToken}` } },
       );
 
       setApps(
@@ -170,55 +154,15 @@ const Settings = () => {
     }
   };
 
-  const validateDomains = (domainString) => {
-    if (
-      !domainString ||
-      domainString.trim() === "*" ||
-      domainString.trim() === ""
-    )
-      return true;
-
-    const domains = domainString.split(",").map((d) => d.trim());
-    // Simple regex for domain validation (supports localhost, IPs, and standard domains)
-    const domainRegex =
-      /^(?:\*|[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+|localhost|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/;
-
-    const invalidDomains = domains.filter((d) => !domainRegex.test(d));
-
-    if (invalidDomains.length > 0) {
-      return `Invalid domains found: ${invalidDomains.join(", ")}`;
-    }
-    return true;
-  };
-
   const handleDomainSave = async (appId) => {
     const domains = domainEdits[appId];
-    const validation = validateDomains(domains);
-
-    if (validation !== true) {
-      toast.error(validation);
-      return;
-    }
-
-    const isConfirmed = await confirm({
-      title: "Update Allowed Domains?",
-      message:
-        "Are you sure you want to update the allowed domains for this app? \n\nIncorrect configurations may block legitimate payment requests.",
-      confirmText: "Save Changes",
-      type: "primary",
-    });
-
-    if (!isConfirmed) return;
-
     setSaveStatus({ ...saveStatus, [appId]: "saving" });
     try {
-      const adminKey = localStorage.getItem("adminKey");
-      const domains = domainEdits[appId];
-
+      const adminToken = localStorage.getItem("adminToken");
       await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/admin/apps/${appId}/domains`,
         { allowed_domains: domains },
-        { headers: { "x-admin-key": adminKey } },
+        { headers: { Authorization: `Bearer ${adminToken}` } },
       );
 
       setApps(
@@ -227,8 +171,7 @@ const Settings = () => {
         ),
       );
       setSaveStatus({ ...saveStatus, [appId]: "success" });
-      toast.success("Domains updated successfully");
-
+      toast.success("Domains updated");
       setTimeout(() => {
         setSaveStatus((prev) => {
           const newState = { ...prev };
@@ -237,161 +180,171 @@ const Settings = () => {
         });
       }, 3000);
     } catch (error) {
-      console.error("Failed to update domains", error);
       setSaveStatus({ ...saveStatus, [appId]: "error" });
-      toast.error("Failed to update domains");
+      toast.error("Update failed");
     }
   };
 
-  if (loading)
-    return <div className="p-8 text-center">Loading settings...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+    </div>
+  );
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">System Settings</h2>
+    <div className="max-w-7xl mx-auto space-y-8">
+      <div>
+        <h2 className="text-3xl font-bold text-gray-900 tracking-tight">System Configuration</h2>
+        <p className="text-gray-500 mt-2 font-medium">Global governance and application-specific security policies.</p>
+      </div>
 
-      {/* Global Switch */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Global Payment Processing
-            </h3>
-            <p className="text-gray-500 text-sm mt-1">
-              When disabled, no payment requests will be accepted from any app.
+      {/* Global Setting Card */}
+      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+           <Globe size={120} className="text-primary-600" />
+        </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div className="max-w-2xl">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
+                <Shield size={18} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Global Processing Gateway</h3>
+            </div>
+            <p className="text-gray-500 leading-relaxed font-medium">
+              CRITICAL: This master switch controls the entire payment orchestration layer. Disabling this will instantly reject all incoming payment attempts regardless of individual app settings.
             </p>
           </div>
-          <div>
+          <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
             <button
               onClick={handleGlobalToggle}
-              className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              className={cn(
+                "relative inline-flex h-9 w-16 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-4",
                 settings.global_payment_enabled === "true"
-                  ? "bg-green-500"
-                  : "bg-red-500"
-              }`}
+                  ? "bg-emerald-500 shadow-lg shadow-emerald-500/30 focus:ring-emerald-500/20"
+                  : "bg-rose-500 shadow-lg shadow-rose-500/30 focus:ring-rose-500/20"
+              )}
             >
               <span
-                className={`inline-block h-6 w-6 transform rounded-full bg-white transition transition-transform ${
-                  settings.global_payment_enabled === "true"
-                    ? "translate-x-7"
-                    : "translate-x-1"
-                }`}
+                className={cn(
+                  "inline-block h-7 w-7 transform rounded-full bg-white shadow-md transition-transform duration-300",
+                  settings.global_payment_enabled === "true" ? "translate-x-8" : "translate-x-1"
+                )}
               />
             </button>
-            <span className="ml-3 font-medium text-sm">
-              {settings.global_payment_enabled === "true"
-                ? "Active"
-                : "Stopped"}
-            </span>
+            <div className="flex flex-col">
+              <span className={cn(
+                "text-[10px] font-bold uppercase tracking-widest",
+                settings.global_payment_enabled === "true" ? "text-emerald-600" : "text-rose-600"
+              )}>Status</span>
+              <span className="font-bold text-gray-900">
+                {settings.global_payment_enabled === "true" ? "OPERATIONAL" : "SUSPENDED"}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <h3 className="text-xl font-bold mb-4">App Management</h3>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                App Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                Mode
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Allowed Domains
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {apps.map((app) => (
-              <tr key={app.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    {app.name}
-                  </div>
-                  <div className="text-xs text-gray-500 font-mono">
-                    {app.id}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() =>
-                      handleAppStatusToggle(app.id, app.is_active, app.name)
-                    }
-                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      app.is_active
-                        ? "bg-green-100 text-green-800 hover:bg-green-200"
-                        : "bg-red-100 text-red-800 hover:bg-red-200"
-                    }`}
-                  >
-                    {app.is_active ? "Active" : "Blocked"}
-                  </button>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() =>
-                      handleAppModeToggle(app.id, app.is_live_mode, app.name)
-                    }
-                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      app.is_live_mode
-                        ? "bg-purple-100 text-purple-800 hover:bg-purple-200"
-                        : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                    }`}
-                  >
-                    {app.is_live_mode ? "LIVE" : "TEST"}
-                  </button>
-                </td>
-                <td className="px-6 py-4">
-                  <input
-                    type="text"
-                    className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Comma separated domains (e.g. example.com, localhost)"
-                    value={domainEdits[app.id] || ""}
-                    onChange={(e) =>
-                      setDomainEdits({
-                        ...domainEdits,
-                        [app.id]: e.target.value,
-                      })
-                    }
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    Use * for all domains
-                  </p>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => handleDomainSave(app.id)}
-                    disabled={saveStatus[app.id] === "saving"}
-                    className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {saveStatus[app.id] === "saving" ? (
-                      "Saving..."
-                    ) : saveStatus[app.id] === "success" ? (
-                      <>
-                        <CheckCircle size={14} /> Saved
-                      </>
-                    ) : saveStatus[app.id] === "error" ? (
-                      <>
-                        <AlertTriangle size={14} /> Failed
-                      </>
-                    ) : (
-                      <>
-                        <Save size={14} /> Save
-                      </>
-                    )}
-                  </button>
-                </td>
+      {/* App Management Section */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-8 border-b border-gray-50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 border border-gray-100">
+                <Cpu size={20} />
+             </div>
+             <h3 className="text-xl font-bold text-gray-900">Application Governance</h3>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-[#F9FAFB]">
+              <tr>
+                <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest w-1/4">Entity Metadata</th>
+                <th className="px-8 py-5 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Policy</th>
+                <th className="px-8 py-5 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Environment</th>
+                <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">CORS White-list</th>
+                <th className="px-8 py-5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Governance</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-50">
+              {apps.map((app) => (
+                <tr key={app.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-8 py-6">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-gray-900 mb-0.5">{app.name}</span>
+                      <span className="text-[10px] text-gray-400 font-mono tracking-tighter uppercase">{app.id}</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-center">
+                    <button
+                      onClick={() => handleAppStatusToggle(app.id, app.is_active, app.name)}
+                      className={cn(
+                        "px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all",
+                        app.is_active
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100"
+                          : "bg-rose-50 text-rose-700 border-rose-100 hover:bg-rose-100"
+                      )}
+                    >
+                      {app.is_active ? "Enforced" : "Restricted"}
+                    </button>
+                  </td>
+                  <td className="px-8 py-6 text-center">
+                    <button
+                      onClick={() => handleAppModeToggle(app.id, app.is_live_mode, app.name)}
+                      className={cn(
+                        "px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all",
+                        app.is_live_mode
+                          ? "bg-indigo-50 text-indigo-700 border-indigo-100 hover:bg-indigo-100"
+                          : "bg-slate-50 text-slate-700 border-slate-100 hover:bg-slate-100"
+                      )}
+                    >
+                      {app.is_live_mode ? "PROD" : "SANDBOX"}
+                    </button>
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="relative group">
+                      <input
+                        type="text"
+                        className="w-full bg-gray-50 border border-transparent rounded-xl px-4 py-3 text-xs font-medium text-gray-700 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all pr-10"
+                        placeholder="Comma separated domains (e.g. example.com)"
+                        value={domainEdits[app.id] || ""}
+                        onChange={(e) => setDomainEdits({ ...domainEdits, [app.id]: e.target.value })}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300">
+                         <Globe size={14} />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-right">
+                    <button
+                      onClick={() => handleDomainSave(app.id)}
+                      disabled={saveStatus[app.id] === "saving"}
+                      className={cn(
+                        "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 shadow-sm hover:shadow-md",
+                        saveStatus[app.id] === "success" ? "bg-emerald-500 text-white" :
+                        saveStatus[app.id] === "error" ? "bg-rose-500 text-white" :
+                        "bg-primary-600 text-white hover:bg-primary-700"
+                      )}
+                    >
+                      {saveStatus[app.id] === "saving" ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-2 border-white/30 border-t-white" />
+                      ) : saveStatus[app.id] === "success" ? (
+                        <Check size={14} />
+                      ) : saveStatus[app.id] === "error" ? (
+                        <AlertTriangle size={14} />
+                      ) : (
+                        <Save size={14} />
+                      )}
+                      {saveStatus[app.id] === "success" ? "Success" : 
+                       saveStatus[app.id] === "error" ? "Retry" : 
+                       saveStatus[app.id] === "saving" ? "Saving" : "Update"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
