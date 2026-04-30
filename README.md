@@ -1,6 +1,6 @@
-# SVARP Frontend
+# Payment Portal Frontend
 
-This is the frontend application for SVARP, built with **React** and **Vite**, styled using **TailwindCSS**.
+This is the frontend application for Payment Portal, built with **React** and **Vite**, styled using **TailwindCSS**.
 
 ## Tech Stack
 

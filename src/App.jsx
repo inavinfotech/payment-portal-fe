@@ -15,7 +15,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
-    <Router>
+    <Router basename="/payment">
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
