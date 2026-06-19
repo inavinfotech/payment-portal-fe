@@ -27,7 +27,7 @@ const SidebarItem = ({ to, icon: Icon, label }) => (
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
-  const userEmail = "admin@svarp.com"; // Placeholder or from localStorage if available
+  const userEmail = "EMAIL ADDRESS"; // Placeholder or from localStorage if available
   
   const logout = () => {
     localStorage.removeItem("adminToken");
