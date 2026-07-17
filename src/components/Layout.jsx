@@ -27,10 +27,11 @@ const SidebarItem = ({ to, icon: Icon, label }) => (
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
-  const userEmail = "EMAIL ADDRESS"; // Placeholder or from localStorage if available
+  const userEmail = localStorage.getItem("adminEmail") || "Admin";
   
   const logout = () => {
     localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminEmail");
     navigate('/login');
   };
   
