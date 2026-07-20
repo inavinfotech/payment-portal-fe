@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Plus, Copy, Key, Calendar, ShieldCheck, AlertCircle, Building2 } from 'lucide-react';
+import { Plus, Copy, Key, Calendar, ShieldCheck, AlertCircle, Building2, Edit3 } from 'lucide-react';
 import { useToast } from "../context/ToastContext";
 import { cn } from "../utils/cn";
 
@@ -16,6 +16,12 @@ const Apps = () => {
   const [newAppAccountId, setNewAppAccountId] = useState("");
   const [createdApp, setCreatedApp] = useState(null);
   const [razorpayAccounts, setRazorpayAccounts] = useState([]);
+
+  // Edit App state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingApp, setEditingApp] = useState(null);
+  const [editAppName, setEditAppName] = useState("");
+  const [editAppAccountId, setEditAppAccountId] = useState("");
 
   const toast = useToast();
 
@@ -60,6 +66,29 @@ const Apps = () => {
     } catch (error) {
       console.error("Failed to create app", error);
       toast.error(error.response?.data?.detail || "Failed to create app");
+    }
+  };
+
+  const openEdit = (app) => {
+    setEditingApp(app);
+    setEditAppName(app.name);
+    setEditAppAccountId(app.razorpay_account_id || "");
+    setShowEditModal(true);
+  };
+
+  const handleUpdateApp = async () => {
+    try {
+      const payload = {
+        name: editAppName,
+        razorpay_account_id: editAppAccountId || null
+      };
+      await axios.put(`${API}/admin/apps/${editingApp.id}`, payload, { headers: headers() });
+      toast.success("Application updated successfully");
+      setShowEditModal(false);
+      fetchApps();
+    } catch (error) {
+      console.error("Failed to update app", error);
+      toast.error(error.response?.data?.detail || "Failed to update app");
     }
   };
 
@@ -259,10 +288,17 @@ const Apps = () => {
                       {new Date(app.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                     </div>
                   </td>
-                  <td className="px-6 py-5 whitespace-nowrap text-right">
+                  <td className="px-6 py-5 whitespace-nowrap text-right flex items-center justify-end gap-2">
+                    <button 
+                      onClick={() => openEdit(app)}
+                      className="text-gray-500 hover:text-primary-600 hover:bg-primary-50 p-2 rounded-xl transition-colors border border-transparent hover:border-primary-100 flex items-center justify-center cursor-pointer"
+                      title="Edit Application"
+                    >
+                      <Edit3 size={15} />
+                    </button>
                     <button 
                       onClick={() => copyToClipboard(app.api_secret_hash)}
-                      className="text-primary-600 hover:bg-primary-50 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-transparent hover:border-primary-100"
+                      className="text-primary-600 hover:bg-primary-50 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-transparent hover:border-primary-100 cursor-pointer"
                     >
                       Security Logs
                     </button>
@@ -273,6 +309,65 @@ const Apps = () => {
           </table>
         </div>
       </div>
+
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-gray-100 animate-in zoom-in-95 duration-300">
+            <h3 className="text-2xl font-bold mb-6 text-gray-900">Edit Application</h3>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Display Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. My Awesome Store"
+                  className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white focus:outline-none transition-all placeholder:text-gray-400 font-medium"
+                  value={editAppName}
+                  onChange={(e) => setEditAppName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <span className="flex items-center gap-2">
+                    <Building2 size={16} className="text-gray-400" />
+                    Razorpay Account
+                  </span>
+                </label>
+                <select
+                  className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white focus:outline-none transition-all text-gray-700 font-medium"
+                  value={editAppAccountId}
+                  onChange={(e) => setEditAppAccountId(e.target.value)}
+                >
+                  <option value="">Default Account</option>
+                  {razorpayAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} {acc.is_default ? "(Default)" : ""} — {acc.test_key_id}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1.5">Select which Razorpay account this app should use for payments.</p>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateApp}
+                  className="px-8 py-3 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 shadow-lg shadow-primary-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                  disabled={!editAppName}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
