@@ -1,31 +1,32 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Plus, Copy, Key, Calendar, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Plus, Copy, Key, Calendar, ShieldCheck, AlertCircle, Building2 } from 'lucide-react';
 import { useToast } from "../context/ToastContext";
 import { cn } from "../utils/cn";
+
+const API = import.meta.env.VITE_API_BASE_URL;
+const getToken = () => localStorage.getItem("adminToken");
+const headers = () => ({ Authorization: `Bearer ${getToken()}` });
 
 const Apps = () => {
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newAppName, setNewAppName] = useState("");
+  const [newAppAccountId, setNewAppAccountId] = useState("");
   const [createdApp, setCreatedApp] = useState(null);
+  const [razorpayAccounts, setRazorpayAccounts] = useState([]);
 
   const toast = useToast();
 
   useEffect(() => {
     fetchApps();
+    fetchRazorpayAccounts();
   }, []);
 
   const fetchApps = async () => {
     try {
-      const adminToken = localStorage.getItem("adminToken");
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/admin/apps`,
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        },
-      );
+      const response = await axios.get(`${API}/admin/apps`, { headers: headers() });
       setApps(response.data);
     } catch (error) {
       console.error("Failed to fetch apps", error);
@@ -35,21 +36,30 @@ const Apps = () => {
     }
   };
 
+  const fetchRazorpayAccounts = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/razorpay-accounts`, { headers: headers() });
+      setRazorpayAccounts(res.data);
+    } catch (err) {
+      console.error("Failed to fetch Razorpay accounts", err);
+    }
+  };
+
   const handleCreateApp = async () => {
     try {
-      const adminToken = localStorage.getItem("adminToken");
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/admin/apps`,
-        { name: newAppName },
-        { headers: { Authorization: `Bearer ${adminToken}` } },
-      );
+      const payload = { name: newAppName };
+      if (newAppAccountId) payload.razorpay_account_id = newAppAccountId;
+      
+      const response = await axios.post(`${API}/admin/apps`, payload, { headers: headers() });
       setCreatedApp(response.data);
-      setApps([...apps, response.data]);
+      // Refetch to get full data with razorpay_account_name
+      fetchApps();
       setNewAppName("");
+      setNewAppAccountId("");
       toast.success("App created successfully");
     } catch (error) {
       console.error("Failed to create app", error);
-      toast.error("Failed to create app");
+      toast.error(error.response?.data?.detail || "Failed to create app");
     }
   };
 
@@ -100,6 +110,30 @@ const Apps = () => {
                     onChange={(e) => setNewAppName(e.target.value)}
                   />
                 </div>
+
+                {/* Razorpay Account Select */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <span className="flex items-center gap-2">
+                      <Building2 size={16} className="text-gray-400" />
+                      Razorpay Account
+                    </span>
+                  </label>
+                  <select
+                    className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white focus:outline-none transition-all text-gray-700 font-medium"
+                    value={newAppAccountId}
+                    onChange={(e) => setNewAppAccountId(e.target.value)}
+                  >
+                    <option value="">Default Account</option>
+                    {razorpayAccounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} {acc.is_default ? "(Default)" : ""} — {acc.test_key_id}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1.5">Select which Razorpay account this app should use for payments.</p>
+                </div>
+
                 <div className="flex justify-end gap-3 pt-4">
                   <button
                     onClick={() => setShowModal(false)}
@@ -175,6 +209,7 @@ const Apps = () => {
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Application Name</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Public Identifier</th>
                 <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Razorpay Account</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Registration Date</th>
                 <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-widest">Actions</th>
               </tr>
@@ -207,6 +242,16 @@ const Apps = () => {
                     )}>
                       {app.is_active ? "Active" : "Disabled"}
                     </span>
+                  </td>
+                  <td className="px-6 py-5 whitespace-nowrap">
+                    {app.razorpay_account_name ? (
+                      <div className="flex items-center gap-2">
+                        <Building2 size={14} className="text-primary-500" />
+                        <span className="text-xs font-semibold text-gray-700">{app.razorpay_account_name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">Not assigned</span>
+                    )}
                   </td>
                   <td className="px-6 py-5 whitespace-nowrap">
                     <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">

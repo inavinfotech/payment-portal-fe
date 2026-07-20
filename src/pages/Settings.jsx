@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Save, AlertTriangle, CheckCircle, XCircle, Shield, Globe, Cpu, Settings as SettingsIcon, Check } from "lucide-react";
+import { Save, AlertTriangle, CheckCircle, XCircle, Shield, Globe, Cpu, Settings as SettingsIcon, Check, Building2 } from "lucide-react";
 import { useConfirm } from "../context/ConfirmContext";
 import { useToast } from "../context/ToastContext";
 import { cn } from "../utils/cn";
 
+const API = import.meta.env.VITE_API_BASE_URL;
+const getToken = () => localStorage.getItem("adminToken");
+const authHeaders = () => ({ Authorization: `Bearer ${getToken()}` });
+
 const Settings = () => {
   const [settings, setSettings] = useState({});
   const [apps, setApps] = useState([]);
+  const [razorpayAccounts, setRazorpayAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [domainEdits, setDomainEdits] = useState({}); // { appId: "domain1, domain2" }
   const [saveStatus, setSaveStatus] = useState({}); // { appId: "saving" | "success" | "error" }
@@ -21,18 +26,22 @@ const Settings = () => {
 
   const fetchData = async () => {
     try {
-      const adminToken = localStorage.getItem("adminToken");
-      const [settingsRes, appsRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_BASE_URL}/admin/settings`, {
+      const adminToken = getToken();
+      const [settingsRes, appsRes, accountsRes] = await Promise.all([
+        axios.get(`${API}/admin/settings`, {
           headers: { Authorization: `Bearer ${adminToken}` },
         }),
-        axios.get(`${import.meta.env.VITE_API_BASE_URL}/admin/apps`, {
+        axios.get(`${API}/admin/apps`, {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+        axios.get(`${API}/admin/razorpay-accounts`, {
           headers: { Authorization: `Bearer ${adminToken}` },
         }),
       ]);
 
       setSettings(settingsRes.data);
       setApps(appsRes.data);
+      setRazorpayAccounts(accountsRes.data);
 
       const initialDomains = {};
       appsRes.data.forEach((app) => {
@@ -68,10 +77,10 @@ const Settings = () => {
     if (!isConfirmed) return;
 
     try {
-      const adminToken = localStorage.getItem("adminToken");
+      const adminToken = getToken();
 
       await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/admin/settings`,
+        `${API}/admin/settings`,
         { global_payment_enabled: newValue },
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
@@ -98,11 +107,11 @@ const Settings = () => {
     if (!isConfirmed) return;
 
     try {
-      const adminToken = localStorage.getItem("adminToken");
+      const adminToken = getToken();
       const newStatus = !currentStatus;
 
       await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/admin/apps/${appId}/status`,
+        `${API}/admin/apps/${appId}/status`,
         { is_active: newStatus },
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
@@ -131,11 +140,11 @@ const Settings = () => {
     if (!isConfirmed) return;
 
     try {
-      const adminToken = localStorage.getItem("adminToken");
+      const adminToken = getToken();
       const newMode = !currentMode;
 
       await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/admin/apps/${appId}/mode`,
+        `${API}/admin/apps/${appId}/mode`,
         { is_live_mode: newMode },
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
@@ -154,13 +163,40 @@ const Settings = () => {
     }
   };
 
+  const handleAccountChange = async (appId, newAccountId) => {
+    try {
+      const adminToken = getToken();
+      const res = await axios.put(
+        `${API}/admin/apps/${appId}/razorpay-account`,
+        { razorpay_account_id: newAccountId || null },
+        { headers: { Authorization: `Bearer ${adminToken}` } },
+      );
+
+      setApps(
+        apps.map((app) =>
+          app.id === appId
+            ? {
+                ...app,
+                razorpay_account_id: res.data.razorpay_account_id,
+                razorpay_account_name: res.data.razorpay_account_name,
+              }
+            : app,
+        ),
+      );
+      toast.success("Razorpay account updated");
+    } catch (error) {
+      console.error("Failed to update Razorpay account", error);
+      toast.error("Failed to update Razorpay account");
+    }
+  };
+
   const handleDomainSave = async (appId) => {
     const domains = domainEdits[appId];
     setSaveStatus({ ...saveStatus, [appId]: "saving" });
     try {
-      const adminToken = localStorage.getItem("adminToken");
+      const adminToken = getToken();
       await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/admin/apps/${appId}/domains`,
+        `${API}/admin/apps/${appId}/domains`,
         { allowed_domains: domains },
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
@@ -259,23 +295,24 @@ const Settings = () => {
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-[#F9FAFB]">
               <tr>
-                <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest w-1/4">Entity Metadata</th>
-                <th className="px-8 py-5 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Policy</th>
-                <th className="px-8 py-5 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Environment</th>
-                <th className="px-8 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">CORS White-list</th>
-                <th className="px-8 py-5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Governance</th>
+                <th className="px-6 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest w-1/6">Entity Metadata</th>
+                <th className="px-4 py-5 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Policy</th>
+                <th className="px-4 py-5 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Environment</th>
+                <th className="px-4 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Razorpay Account</th>
+                <th className="px-4 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">CORS White-list</th>
+                <th className="px-6 py-5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Governance</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-50">
               {apps.map((app) => (
                 <tr key={app.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-8 py-6">
+                  <td className="px-6 py-6">
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-gray-900 mb-0.5">{app.name}</span>
                       <span className="text-[10px] text-gray-400 font-mono tracking-tighter uppercase">{app.id}</span>
                     </div>
                   </td>
-                  <td className="px-8 py-6 text-center">
+                  <td className="px-4 py-6 text-center">
                     <button
                       onClick={() => handleAppStatusToggle(app.id, app.is_active, app.name)}
                       className={cn(
@@ -288,7 +325,7 @@ const Settings = () => {
                       {app.is_active ? "Enforced" : "Restricted"}
                     </button>
                   </td>
-                  <td className="px-8 py-6 text-center">
+                  <td className="px-4 py-6 text-center">
                     <button
                       onClick={() => handleAppModeToggle(app.id, app.is_live_mode, app.name)}
                       className={cn(
@@ -301,7 +338,21 @@ const Settings = () => {
                       {app.is_live_mode ? "PROD" : "SANDBOX"}
                     </button>
                   </td>
-                  <td className="px-8 py-6">
+                  <td className="px-4 py-6">
+                    <select
+                      className="w-full bg-gray-50 border border-transparent rounded-xl px-3 py-2.5 text-xs font-medium text-gray-700 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all cursor-pointer"
+                      value={app.razorpay_account_id || ""}
+                      onChange={(e) => handleAccountChange(app.id, e.target.value)}
+                    >
+                      <option value="">— None —</option>
+                      {razorpayAccounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name} {acc.is_default ? "⭐" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-4 py-6">
                     <div className="relative group">
                       <input
                         type="text"
@@ -315,7 +366,7 @@ const Settings = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-6 text-right">
+                  <td className="px-6 py-6 text-right">
                     <button
                       onClick={() => handleDomainSave(app.id)}
                       disabled={saveStatus[app.id] === "saving"}

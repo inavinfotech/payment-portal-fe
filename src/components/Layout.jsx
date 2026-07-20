@@ -6,7 +6,8 @@ import {
   AppWindow,
   Settings, 
   LogOut, 
-  Layers
+  Layers,
+  Building2
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
@@ -53,6 +54,7 @@ const Layout = ({ children }) => {
           <SidebarItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
           <SidebarItem to="/apps" icon={AppWindow} label="Apps" />
           <SidebarItem to="/payments" icon={CreditCard} label="Payments" />
+          <SidebarItem to="/razorpay-accounts" icon={Building2} label="Razorpay Accounts" />
           <SidebarItem to="/settings" icon={Settings} label="Settings" />
         </nav>
 
