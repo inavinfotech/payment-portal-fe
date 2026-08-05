@@ -15,8 +15,10 @@ import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
+  const basename = import.meta.env.VITE_ROUTER_BASENAME ?? import.meta.env.VITE_BASENAME ?? "/payment";
+
   return (
-    <Router basename="/payment">
+    <Router basename={basename}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
