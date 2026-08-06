@@ -128,14 +128,15 @@ const Payments = () => {
     });
   }, [payments, searchQuery, selectedStatus, selectedApp, selectedMode]);
 
-  // Statistics calculation
+  // Statistics calculation — only live mode payments count towards stats
   const stats = useMemo(() => {
-    const totalCount = payments.length;
-    const paidPayments = payments.filter((p) => p.status === "paid");
+    const livePayments = payments.filter((p) => p.is_live_mode);
+    const totalCount = livePayments.length;
+    const paidPayments = livePayments.filter((p) => p.status === "paid");
     const totalRevenue = paidPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
     const successRate = totalCount > 0 ? ((paidPayments.length / totalCount) * 100).toFixed(1) : 0;
-    const pendingCount = payments.filter((p) => p.status === "created").length;
-    const failedCount = payments.filter((p) => p.status === "failed" || p.status === "cancelled").length;
+    const pendingCount = livePayments.filter((p) => p.status === "created").length;
+    const failedCount = livePayments.filter((p) => p.status === "failed" || p.status === "cancelled").length;
 
     return { totalCount, totalRevenue, successRate, pendingCount, failedCount };
   }, [payments]);
