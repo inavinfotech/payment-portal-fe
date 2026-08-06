@@ -35,6 +35,7 @@ const Payments = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedApp, setSelectedApp] = useState("all");
+  const [selectedMode, setSelectedMode] = useState("all");
   const [expandedRow, setExpandedRow] = useState(null);
 
   useEffect(() => {
@@ -118,9 +119,14 @@ const Payments = () => {
       const matchesApp =
         selectedApp === "all" || payment.app_name === selectedApp;
 
-      return matchesSearch && matchesStatus && matchesApp;
+      const matchesMode =
+        selectedMode === "all" ||
+        (selectedMode === "test" && !payment.is_live_mode) ||
+        (selectedMode === "live" && payment.is_live_mode);
+
+      return matchesSearch && matchesStatus && matchesApp && matchesMode;
     });
-  }, [payments, searchQuery, selectedStatus, selectedApp]);
+  }, [payments, searchQuery, selectedStatus, selectedApp, selectedMode]);
 
   // Statistics calculation
   const stats = useMemo(() => {
@@ -314,11 +320,26 @@ const Payments = () => {
             </select>
           </div>
 
-          {(selectedStatus !== "all" || selectedApp !== "all" || searchQuery !== "") && (
+          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs text-gray-600">
+            <SlidersHorizontal size={13} className="text-gray-400" />
+            <span className="font-semibold text-gray-500">Mode:</span>
+            <select
+              value={selectedMode}
+              onChange={(e) => setSelectedMode(e.target.value)}
+              className="bg-transparent font-bold text-gray-800 focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Modes</option>
+              <option value="test">Test (Sandbox)</option>
+              <option value="live">Live (Production)</option>
+            </select>
+          </div>
+
+          {(selectedStatus !== "all" || selectedApp !== "all" || selectedMode !== "all" || searchQuery !== "") && (
             <button
               onClick={() => {
                 setSelectedStatus("all");
                 setSelectedApp("all");
+                setSelectedMode("all");
                 setSearchQuery("");
               }}
               className="text-xs font-bold text-primary-600 hover:text-primary-800 underline px-2"
@@ -342,6 +363,9 @@ const Payments = () => {
                   App Origin
                 </th>
                 <th className="px-6 py-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  Mode
+                </th>
+                <th className="px-6 py-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                   Razorpay Account
                 </th>
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -363,7 +387,7 @@ const Payments = () => {
             <tbody className="bg-white divide-y divide-gray-100">
               {filteredPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center">
+                  <td colSpan={9} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <div className="p-3 bg-gray-100 text-gray-400 rounded-full">
                         <AlertCircle size={24} />
@@ -439,6 +463,22 @@ const Payments = () => {
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs">
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                             {payment.app_name}
+                          </span>
+                        </td>
+
+                        {/* Mode Badge */}
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider border shadow-2xs",
+                            payment.is_live_mode
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-orange-50 text-orange-700 border-orange-200"
+                          )}>
+                            <span className={cn(
+                              "w-1.5 h-1.5 rounded-full",
+                              payment.is_live_mode ? "bg-emerald-500 animate-pulse" : "bg-orange-500"
+                            )}></span>
+                            {payment.is_live_mode ? "Live" : "Test"}
                           </span>
                         </td>
 
@@ -543,7 +583,7 @@ const Payments = () => {
                       {/* Expanded Details Row */}
                       {isExpanded && (
                         <tr className="bg-slate-50 border-b border-gray-200">
-                          <td colSpan={8} className="px-6 py-4">
+                          <td colSpan={9} className="px-6 py-4">
                             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs space-y-3">
                               <div className="flex items-center justify-between border-b border-gray-100 pb-2">
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-2">
