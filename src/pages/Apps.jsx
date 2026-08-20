@@ -14,6 +14,8 @@ const Apps = () => {
   const [showModal, setShowModal] = useState(false);
   const [newAppName, setNewAppName] = useState("");
   const [newAppAccountId, setNewAppAccountId] = useState("");
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
+  const [newWebhookSecret, setNewWebhookSecret] = useState("");
   const [createdApp, setCreatedApp] = useState(null);
   const [razorpayAccounts, setRazorpayAccounts] = useState([]);
 
@@ -22,6 +24,8 @@ const Apps = () => {
   const [editingApp, setEditingApp] = useState(null);
   const [editAppName, setEditAppName] = useState("");
   const [editAppAccountId, setEditAppAccountId] = useState("");
+  const [editWebhookUrl, setEditWebhookUrl] = useState("");
+  const [editWebhookSecret, setEditWebhookSecret] = useState("");
 
   const toast = useToast();
 
@@ -55,6 +59,8 @@ const Apps = () => {
     try {
       const payload = { name: newAppName };
       if (newAppAccountId) payload.razorpay_account_id = newAppAccountId;
+      if (newWebhookUrl) payload.webhook_url = newWebhookUrl;
+      if (newWebhookSecret) payload.webhook_secret = newWebhookSecret;
       
       const response = await axios.post(`${API}/admin/apps`, payload, { headers: headers() });
       setCreatedApp(response.data);
@@ -62,6 +68,8 @@ const Apps = () => {
       fetchApps();
       setNewAppName("");
       setNewAppAccountId("");
+      setNewWebhookUrl("");
+      setNewWebhookSecret("");
       toast.success("App created successfully");
     } catch (error) {
       console.error("Failed to create app", error);
@@ -73,6 +81,8 @@ const Apps = () => {
     setEditingApp(app);
     setEditAppName(app.name);
     setEditAppAccountId(app.razorpay_account_id || "");
+    setEditWebhookUrl(app.webhook_url || "");
+    setEditWebhookSecret(app.webhook_secret || "");
     setShowEditModal(true);
   };
 
@@ -80,7 +90,9 @@ const Apps = () => {
     try {
       const payload = {
         name: editAppName,
-        razorpay_account_id: editAppAccountId || null
+        razorpay_account_id: editAppAccountId || null,
+        webhook_url: editWebhookUrl || null,
+        webhook_secret: editWebhookSecret || null
       };
       await axios.put(`${API}/admin/apps/${editingApp.id}`, payload, { headers: headers() });
       toast.success("Application updated successfully");
@@ -161,6 +173,31 @@ const Apps = () => {
                     ))}
                   </select>
                   <p className="text-xs text-gray-400 mt-1.5">Select which Razorpay account this app should use for payments.</p>
+                </div>
+
+                {/* Webhook URL */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Outbound Webhook URL (Optional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://api.svarp.org/lms/webhooks/payment"
+                    className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white focus:outline-none transition-all placeholder:text-gray-400 font-medium text-sm"
+                    value={newWebhookUrl}
+                    onChange={(e) => setNewWebhookUrl(e.target.value)}
+                  />
+                </div>
+
+                {/* Webhook Secret */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Webhook Secret (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. default_webhook_secret"
+                    className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white focus:outline-none transition-all placeholder:text-gray-400 font-medium text-sm"
+                    value={newWebhookSecret}
+                    onChange={(e) => setNewWebhookSecret(e.target.value)}
+                  />
+                  <p className="text-xs text-gray-400 mt-1.5">Secret key used to sign outbound payment webhooks sent to client app.</p>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4">
@@ -347,6 +384,31 @@ const Apps = () => {
                   ))}
                 </select>
                 <p className="text-xs text-gray-400 mt-1.5">Select which Razorpay account this app should use for payments.</p>
+              </div>
+
+              {/* Webhook URL */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Outbound Webhook URL</label>
+                <input
+                  type="url"
+                  placeholder="https://api.svarp.org/lms/webhooks/payment"
+                  className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white focus:outline-none transition-all placeholder:text-gray-400 font-medium text-sm"
+                  value={editWebhookUrl}
+                  onChange={(e) => setEditWebhookUrl(e.target.value)}
+                />
+              </div>
+
+              {/* Webhook Secret */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Webhook Secret</label>
+                <input
+                  type="text"
+                  placeholder="e.g. default_webhook_secret"
+                  className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white focus:outline-none transition-all placeholder:text-gray-400 font-medium text-sm"
+                  value={editWebhookSecret}
+                  onChange={(e) => setEditWebhookSecret(e.target.value)}
+                />
+                <p className="text-xs text-gray-400 mt-1.5">Secret key used to sign outbound payment webhooks sent to client app.</p>
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
